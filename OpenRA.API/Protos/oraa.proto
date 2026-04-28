@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+option csharp_namespace = "OpenRA.API.Protos";
+
+package oraa;
+
+// The RL Environment service provides a step-based interface
+// for reinforcement learning clients to interact with OpenRA.
+service RlEnvironment {
+  // Reset the environment to an initial state and return the first observation.
+  rpc Reset (ResetRequest) returns (ResetResponse);
+
+  // Advance the environment by one tick with the given action and return the new observation.
+  rpc Step (StepRequest) returns (StepResponse);
+}
+
+// Request to reset the environment.
+message ResetRequest {
+  // Map UID to load (optional; uses default if empty).
+  string map_uid = 1;
+}
+
+// Response after resetting the environment.
+message ResetResponse {
+  // The initial game state observation.
+  GameState state = 1;
+}
+
+// A single action to perform in the environment.
+message StepRequest {
+  // The action to execute this tick.
+  Action action = 1;
+}
+
+// Response after advancing one tick.
+message StepResponse {
+  // The new game state observation after the action.
+  GameState state = 1;
+
+  // Whether the episode is over (game ended).
+  bool done = 2;
+
+  // Reward signal for the agent.
+  double reward = 3;
+}
+
+// Represents an action the agent can take.
+message Action {
+  // The type of action.
+  ActionType type = 1;
+
+  // The actor ID the action applies to (for unit actions).
+  uint32 actor_id = 2;
+
+  // Target cell X coordinate (for Move actions).
+  int32 target_x = 3;
+
+  // Target cell Y coordinate (for Move actions).
+  int32 target_y = 4;
+}
+
+// Enumeration of supported action types.
+enum ActionType {
+  // No action (agent does nothing this tick).
+  ACTION_NOOP = 0;
+
+  // Move a unit to a target cell.
+  ACTION_MOVE = 1;
+
+  // Stop a unit.
+  ACTION_STOP = 2;
+}
+
+// Snapshot of the game state visible to the agent.
+message GameState {
+  // Current game tick number.
+  int32 tick = 1;
+
+  // All units visible to the player.
+  repeated UnitState units = 2;
+
+  // Player's current resource credits.
+  int32 resources = 3;
+}
+
+// State of a single unit/actor.
+message UnitState {
+  // The actor's unique ID.
+  uint32 actor_id = 1;
+
+  // The actor's type name (e.g. "e1", "1tnk").
+  string type = 2;
+
+  // Owner player name.
+  string owner = 3;
+
+  // Current health points.
+  int32 hp = 4;
+
+  // Maximum health points.
+  int32 max_hp = 5;
+
+  // Cell position X.
+  int32 pos_x = 6;
+
+  // Cell position Y.
+  int32 pos_y = 7;
+}

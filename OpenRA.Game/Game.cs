@@ -36,6 +36,12 @@ namespace OpenRA
 
 		public const int TimestepJankThreshold = 250; // Don't catch up for delays larger than 250ms
 
+		/// <summary>
+		/// When true, all rendering, sound, and Thread.Sleep calls are bypassed.
+		/// Controlled by the ORAA_HEADLESS environment variable.
+		/// </summary>
+		public static bool IsHeadless { get; } = Environment.GetEnvironmentVariable("ORAA_HEADLESS") == "1";
+
 		public static InstalledMods Mods { get; private set; }
 		public static ExternalMods ExternalMods { get; private set; }
 
@@ -429,30 +435,37 @@ namespace OpenRA
 			foreach (var mod in ExternalMods)
 				Console.WriteLine($"\t{mod.Key} ({mod.Value.Version})");
 
-			var platforms = new[] { Settings.Game.Platform, "Default", null };
-			foreach (var p in platforms)
+			if (!IsHeadless)
 			{
-				if (p == null)
-					throw new InvalidOperationException("Failed to initialize platform-integration library. Check graphics.log for details.");
-
-				Settings.Game.Platform = p;
-				try
+				var platforms = new[] { Settings.Game.Platform, "Default", null };
+				foreach (var p in platforms)
 				{
-					var platform = CreatePlatform(p);
-					Renderer = new Renderer(platform, Settings.Graphics, manifest.RendererConstants.VertexBatchSize);
-					Sound = new Sound(platform, Settings.Sound);
+					if (p == null)
+						throw new InvalidOperationException("Failed to initialize platform-integration library. Check graphics.log for details.");
 
-					break;
+					Settings.Game.Platform = p;
+					try
+					{
+						var platform = CreatePlatform(p);
+						Renderer = new Renderer(platform, Settings.Graphics, manifest.RendererConstants.VertexBatchSize);
+						Sound = new Sound(platform, Settings.Sound);
+
+						break;
+					}
+					catch (Exception e)
+					{
+						Log.Write("graphics", $"{e}");
+						Console.WriteLine("Renderer initialization failed. Check graphics.log for details.");
+
+						Renderer?.Dispose();
+
+						Sound?.Dispose();
+					}
 				}
-				catch (Exception e)
-				{
-					Log.Write("graphics", $"{e}");
-					Console.WriteLine("Renderer initialization failed. Check graphics.log for details.");
-
-					Renderer?.Dispose();
-
-					Sound?.Dispose();
-				}
+			}
+			else
+			{
+				Console.WriteLine("ORAA Headless mode enabled. Skipping renderer and sound initialization.");
 			}
 
 			InitializeMod(manifest, args);
@@ -815,6 +828,13 @@ namespace OpenRA
 
 			while (state == RunStatus.Running)
 			{
+				// ORAA Headless: tick logic as fast as possible, skip all rendering and sleeping
+				if (IsHeadless)
+				{
+					LogicTick();
+					continue;
+				}
+
 				var logicInterval = Ui.Timestep;
 				var logicWorld = worldRenderer?.World;
 
@@ -930,8 +950,11 @@ namespace OpenRA
 			ModData.Dispose();
 			ChromeProvider.Deinitialize();
 
-			Sound.Dispose();
-			Renderer.Dispose();
+			if (!IsHeadless)
+			{
+				Sound.Dispose();
+				Renderer.Dispose();
+			}
 
 			OnQuit();
 

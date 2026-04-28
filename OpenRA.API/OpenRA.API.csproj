@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<RootNamespace>OpenRA.API</RootNamespace>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Grpc.AspNetCore" Version="2.67.0" />
+		<PackageReference Include="Grpc.Tools" Version="2.67.0" PrivateAssets="All" />
+		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
+	</ItemGroup>
+	<ItemGroup>
+		<Protobuf Include="Protos\oraa.proto" GrpcServices="Server" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\OpenRA.Game\OpenRA.Game.csproj">
+			<Private>False</Private>
+		</ProjectReference>
+		<ProjectReference Include="..\OpenRA.Mods.Common\OpenRA.Mods.Common.csproj">
+			<Private>False</Private>
+		</ProjectReference>
+	</ItemGroup>
+</Project>
